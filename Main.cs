@@ -25,7 +25,11 @@ namespace TraceDrivenSimulation
             System.Threading.Tasks.Parallel.Invoke
             (
                 () => { cpu0.Simulate(filepath, "3-State-Base Protocol"); },
-                () => { cpu1.Simulate(filepath, "Berkley Protocol"); }
+                () => 
+                { 
+                    System.Threading.Thread.Sleep(100); // 短いファイルのとき適当に回避
+                    cpu1.Simulate(filepath, "Berkley Protocol");
+                }
             );
         }
     }
