@@ -93,7 +93,7 @@ namespace TraceDrivenSimulation
             {
                 var targetLine = _lineSet.Where(tagEqual).FirstOrDefault();
                 var restLines = _lineSet.Where(l => l.CacheTag.Tag != line.CacheTag.Tag);
-
+                
                 targetLine.CacheTag.Counter = 0;
                 restLines.ForEach(l => l.CacheTag.Counter++);
                 _lineSet = _lineSet.OrderByDescending(l => l.CacheTag.Counter).ToList();

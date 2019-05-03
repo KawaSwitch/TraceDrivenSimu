@@ -31,6 +31,7 @@ namespace TraceDrivenSimulation
                         targetLine.CacheTag.State == (int)BerkleyProtocol.State.SO)
             {
                 _hitCount++;
+                targetSet.Push(targetLine);
                 // NOTE: キャッシュがI以外のとき, 絶対に追い出しは起こらない
                 return new ReadContent { BusMessage = CPU.BusMessage.None, WriteBacked = false };
             }
@@ -54,12 +55,14 @@ namespace TraceDrivenSimulation
                 _hitCount++;
                 targetLine.CacheTag.State = (int)BerkleyProtocol.State.EO;
                 targetLine.Data = data;
+                targetSet.Push(targetLine);
                 return CPU.BusMessage.Invalidation;
             }
             else if (targetLine.CacheTag.State == (int)BerkleyProtocol.State.EO)
             {
                 _hitCount++;
                 targetLine.Data = data;
+                targetSet.Push(targetLine);
                 return CPU.BusMessage.None;
             }
             else
