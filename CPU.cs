@@ -69,8 +69,8 @@ namespace TraceDrivenSimulation
         /// PCA特論 第3回課題用
         /// </summary>
         /// <param name="fileName">simulate対象ファイル名</param>
-        /// <param name="protocol">simulateするプロトコル</param>
-        public void Simulate(string fileName)
+        /// <param name="title">結果表示タイトル</param>
+        public void Simulate(string fileName, string title)
         {
             string line;
             string[] elements;
@@ -99,6 +99,8 @@ namespace TraceDrivenSimulation
             }      
 
             // 結果表示
+            Console.WriteLine(title);
+
             for (int i = 0; i < _processors.Count; ++i)
                 System.Console.WriteLine("Processor[" + (i+1) + "] " + "Miss rate : " + _processors[i].Cache.MissRate * 100 + " %");
 

@@ -22,16 +22,11 @@ namespace TraceDrivenSimulation
                 }
             }
 
-            // 3-state protocol
-            Console.WriteLine("3-State-Base Protocol");
-            cpu0.Simulate(filepath);
-
-            // プロトコル変更(途中で変更できるものと仮定)
-            //cpu.ChangeProtocol(Cache.Protocol.Berkley);
-
-            // Berkley protocol
-            Console.WriteLine("Berkley Protocol");
-            cpu1.Simulate(filepath);  
+            System.Threading.Tasks.Parallel.Invoke
+            (
+                () => { cpu0.Simulate(filepath, "3-State-Base Protocol"); },
+                () => { cpu1.Simulate(filepath, "Berkley Protocol"); }
+            );
         }
     }
 }
