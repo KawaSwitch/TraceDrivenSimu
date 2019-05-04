@@ -85,21 +85,24 @@ namespace TraceDrivenSimulation
         /// <returns>追い出しがあったら状態, なかったら-1</returns>
         public int Push(Line line)
         {
-            Func<Line, bool> tagEqual = (l => l.CacheTag.Tag == line.CacheTag.Tag);
-
-            if (_lineSet.Count == 0)
-                _lineSet.Add(line);
-            else if (_lineSet.Any(tagEqual))
+            if (_lineSet.Any(l => l.CacheTag.Tag == line.CacheTag.Tag)) // 同タグのラインが存在する
             {
-                var targetLine = _lineSet.Where(tagEqual).FirstOrDefault();
-                var restLines = _lineSet.Where(l => l.CacheTag.Tag != line.CacheTag.Tag);
-                
-                targetLine.CacheTag.Counter = 0;
-                restLines.ForEach(l => l.CacheTag.Counter++);
-                _lineSet = _lineSet.OrderByDescending(l => l.CacheTag.Counter).ToList(); // カウント順に並び替える
+                // 同タグのラインのデータを更新
+                // 状態はここでは変更しない(Cache.SetStateメソッドからのみ変更させる)
+                var updateLineIndex = _lineSet.FindIndex(l => l.CacheTag.Tag == line.CacheTag.Tag);
+                _lineSet[updateLineIndex].Data = line.Data;
+
+                // LRU用カウンタ設定
+                _lineSet[updateLineIndex].CacheTag.Counter = 0;
+                _lineSet.Where(l => l.CacheTag.Tag != line.CacheTag.Tag)
+                        .ForEach(l => l.CacheTag.Counter++);
+
+                // カウント順に並び替える（常にカウント順に並べておく）
+                _lineSet = _lineSet.OrderByDescending(l => l.CacheTag.Counter).ToList();
             }
             else
             {
+                // セットに含まれるラインの数で, 追加か追い出しかを決定
                 if (_lineSet.Count < _setSize)
                 {
                     foreach (var l in _lineSet)

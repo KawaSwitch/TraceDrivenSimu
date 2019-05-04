@@ -56,9 +56,8 @@ namespace TraceDrivenSimulation
                     if (ownerCache.GetState(tag, index) == (int)BerkleyProtocol.State.EO)
                         ownerCache.SetState(tag, index, (int)BerkleyProtocol.State.SO);
 
-                    // NOTE: 本当はここでメモリから読むこむ処理
                     // Line Transfer
-                    if (_processors[_targetID].Cache.Transfer("", tag, index))
+                    if (_processors[_targetID].Cache.Transfer(ownerCache.GetLineData(tag, index), tag, index))
                         this.WriteBackCount++;
                     _processors[_targetID].Cache.SetState(tag, index, (int)BerkleyProtocol.State.SN);
                 }
@@ -93,6 +92,7 @@ namespace TraceDrivenSimulation
 
                 if (ownerCache == null) // メモリがOwner
                 {
+                    // NOTE: 本当はここでメモリから読むこむ処理
                     // Line Transfer
                     if (_processors[_targetID].Cache.Transfer("", tag, index))
                         this.WriteBackCount++;

@@ -75,7 +75,7 @@ namespace TraceDrivenSimulation
         /// <returns>Write-backがあるかどうか</returns>
         public override bool Transfer(object data, string tag, int index)
         {
-            var transLine = new Line { CacheTag = new CacheTag { Tag = tag }, Data = data }; // 本当は外で作る
+            var transLine = new Line { CacheTag = new CacheTag { Tag = tag }, Data = data }; // 本当は外で貰う
             var evictionState = _lineDatas[index].Push(transLine);
 
             if (evictionState == (int)BerkleyProtocol.State.SO ||
