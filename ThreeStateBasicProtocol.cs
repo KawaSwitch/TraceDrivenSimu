@@ -18,6 +18,11 @@ namespace TraceDrivenSimulation
         };
 
         /// <summary>
+        /// コンストラクタ
+        /// </summary>
+        public ThreeStateBasicProtocol(List<Processor> processors) : base(processors) { }
+
+        /// <summary>
         /// 読み込み処理 バスの処理
         /// </summary>
         protected override void Read(string tag, int index, int offset)
@@ -31,32 +36,31 @@ namespace TraceDrivenSimulation
             }
             else if (message == CPU.BusMessage.ReadMiss)
             {
-                var dirtyProcessor = _processors
-                    .Where((_, i) => i != _targetID)
-                    .Where(p => p.Cache.GetState(tag, index) == (int)ThreeStateBasicProtocol.State.D);
+                var dirtyCache = _otherProcessors
+                    .Where(p => p.Cache.GetState(tag, index) == (int)ThreeStateBasicProtocol.State.D)
+                    .Select(p => p.Cache)
+                    .FirstOrDefault();
                 
-                if (dirtyProcessor.Count() == 0)
+                if (dirtyCache == null) // Dirtyなキャッシュが存在しない
                 {
                     // NOTE: 本当はここでメモリから読むこむ処理
                     // Line Transfer
                     if (_processors[_targetID].Cache.Transfer("", tag, index))
                         this.WriteBackCount++;
 
-                    _processors[_targetID].Cache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.C);
-                }
-                else if (dirtyProcessor.Count() == 1)
-                {
-                    this.WriteBackCount++; // 無条件にメモリへライトバック
-                    dirtyProcessor.First().Cache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.C);
-
-                    // NOTE: 本当はここでメモリから読むこむ処理
-                    // Line Transfer
-                    if (_processors[_targetID].Cache.Transfer("", tag, index))
-                        this.WriteBackCount++;
                     _processors[_targetID].Cache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.C);
                 }
                 else
-                    throw new Exception();
+                {
+                    this.WriteBackCount++; // 無条件にメモリへライトバック
+                    dirtyCache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.C);
+
+                    // NOTE: 本当はここでメモリから読むこむ処理
+                    // Line Transfer
+                    if (_processors[_targetID].Cache.Transfer("", tag, index))
+                        this.WriteBackCount++;
+                    _processors[_targetID].Cache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.C);
+                }
             }
             else
                 throw new NotSupportedException();
@@ -75,26 +79,33 @@ namespace TraceDrivenSimulation
             }
             else if (message == CPU.BusMessage.Invalidation)
             {
-                _processors
-                    .Where((_, i) => i != _targetID)
+                _otherProcessors
                     .Where(p => p.Cache.GetState(tag, index) == (int)ThreeStateBasicProtocol.State.C)
                     .ForEach(p => p.Cache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.I));
             }
             else if (message == CPU.BusMessage.WriteMiss)
             {
-                _processors
-                    .Where((_, i) => i != _targetID)
+                // 他キャッシュのClearはInvalidateしておく
+                _otherProcessors
                     .Where(p => p.Cache.GetState(tag, index) == (int)ThreeStateBasicProtocol.State.C)
                     .ForEach(p => p.Cache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.I));
 
-                if (_processors.Any(p => p.Cache.GetState(tag, index) == (int)ThreeStateBasicProtocol.State.D))
-                {
-                    var dirtyProcessor = _processors
-                        .Where((_, i) => i != _targetID)
-                        .Where(p => p.Cache.GetState(tag, index) == (int)ThreeStateBasicProtocol.State.D)
-                        .FirstOrDefault();
+                var dirtyCache = _otherProcessors
+                    .Where(p => p.Cache.GetState(tag, index) == (int)ThreeStateBasicProtocol.State.D)
+                    .Select(p => p.Cache)
+                    .FirstOrDefault();    
 
-                    dirtyProcessor.Cache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.I);
+                if (dirtyCache == null) // Dirtyなキャッシュが存在しない
+                {
+                    // Line Transfer
+                    if (_processors[_targetID].Cache.Transfer("", tag, index))
+                        this.WriteBackCount++;
+
+                    _processors[_targetID].Cache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.D);
+                }
+                else
+                {
+                    dirtyCache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.I);
                     // NOTE: メモリにライトバック
                     this.WriteBackCount++;
 
@@ -104,14 +115,6 @@ namespace TraceDrivenSimulation
 
                     _processors[_targetID].Cache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.C);
                     // NOTE: Write
-                    _processors[_targetID].Cache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.D);
-                }
-                else
-                {
-                    // Line Transfer
-                    if (_processors[_targetID].Cache.Transfer("", tag, index))
-                        this.WriteBackCount++;
-
                     _processors[_targetID].Cache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.D);
                 }
             }

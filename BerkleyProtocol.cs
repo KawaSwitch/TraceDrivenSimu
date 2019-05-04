@@ -19,6 +19,11 @@ namespace TraceDrivenSimulation
         };
 
         /// <summary>
+        /// コンストラクタ
+        /// </summary>
+        public BerkleyProtocol(List<Processor> processors) : base(processors) { }
+
+        /// <summary>
         /// 読み込み処理
         /// </summary>
         protected override void Read(string tag, int index, int offset)
@@ -32,12 +37,12 @@ namespace TraceDrivenSimulation
             }
             else if (message == CPU.BusMessage.ReadMiss)
             {
-                var ownerProcessor = _processors
-                    .Where((_, i) => i != _targetID)
-                    .Where(p => p.Cache.GetState(tag, index) == (int)BerkleyProtocol.State.SO ||
-                                p.Cache.GetState(tag, index) == (int)BerkleyProtocol.State.EO);
+                var ownerCache = _otherProcessors
+                    .Where(p => p.Cache.AnyState(tag, index, (int)BerkleyProtocol.State.SO, (int)BerkleyProtocol.State.EO))
+                    .Select(p => p.Cache)
+                    .FirstOrDefault();
                 
-                if (ownerProcessor.Count() == 0)
+                if (ownerCache == null) // メモリがOwner
                 {
                     // NOTE: 本当はここでメモリから読むこむ処理
                     // Line Transfer
@@ -46,10 +51,10 @@ namespace TraceDrivenSimulation
 
                     _processors[_targetID].Cache.SetState(tag, index, (int)BerkleyProtocol.State.SN);
                 }
-                else if (ownerProcessor.Count() == 1)
+                else // 他キャッシュがOwner
                 {
-                    if (ownerProcessor.First().Cache.GetState(tag, index) == (int)BerkleyProtocol.State.EO)
-                        ownerProcessor.First().Cache.SetState(tag, index, (int)BerkleyProtocol.State.SO);
+                    if (ownerCache.GetState(tag, index) == (int)BerkleyProtocol.State.EO)
+                        ownerCache.SetState(tag, index, (int)BerkleyProtocol.State.SO);
 
                     // NOTE: 本当はここでメモリから読むこむ処理
                     // Line Transfer
@@ -57,8 +62,6 @@ namespace TraceDrivenSimulation
                         this.WriteBackCount++;
                     _processors[_targetID].Cache.SetState(tag, index, (int)BerkleyProtocol.State.SN);
                 }
-                else
-                    throw new Exception();
             }
             else
                 throw new NotSupportedException();
@@ -77,31 +80,29 @@ namespace TraceDrivenSimulation
             }
             else if (message == CPU.BusMessage.Invalidation)
             {
-                _processors
-                    .Where((_, i) => i != _targetID)
-                    .Where(p => p.Cache.GetState(tag, index) == (int)BerkleyProtocol.State.SN ||
-                                p.Cache.GetState(tag, index) == (int)BerkleyProtocol.State.SO)
+                _otherProcessors
+                    .Where(p => p.Cache.AnyState(tag, index, (int)BerkleyProtocol.State.SN, (int)BerkleyProtocol.State.SO))
                     .ForEach(p => p.Cache.SetState(tag, index, (int)BerkleyProtocol.State.I));
             }
             else if (message == CPU.BusMessage.WriteMiss)
             {
-                _processors
-                    .Where((_, i) => i != _targetID)
-                    .Where(p => p.Cache.GetState(tag, index) == (int)BerkleyProtocol.State.EO ||
-                                p.Cache.GetState(tag, index) == (int)BerkleyProtocol.State.SN || // 結局最後にSNとSOもInvalidateされる
-                                p.Cache.GetState(tag, index) == (int)BerkleyProtocol.State.SO)
-                    .ForEach(p => p.Cache.SetState(tag, index, (int)BerkleyProtocol.State.I));
+                var ownerCache = _otherProcessors
+                    .Where(p => p.Cache.AnyState(tag, index, (int)BerkleyProtocol.State.SO, (int)BerkleyProtocol.State.EO))
+                    .Select(p => p.Cache)
+                    .FirstOrDefault();
 
-                if (_processors.Any(p => p.Cache.GetState(tag, index) == (int)BerkleyProtocol.State.SO ||
-                                         p.Cache.GetState(tag, index) == (int)BerkleyProtocol.State.EO))
+                if (ownerCache == null) // メモリがOwner
                 {
-                    var ownerProcessor = _processors
-                        .Where((_, i) => i != _targetID)
-                        .Where(p => p.Cache.GetState(tag, index) == (int)BerkleyProtocol.State.SO ||
-                                    p.Cache.GetState(tag, index) == (int)BerkleyProtocol.State.EO);
-
                     // Line Transfer
-                    if (_processors[_targetID].Cache.Transfer(ownerProcessor.First().Cache.GetLineData(tag, index), tag, index))
+                    if (_processors[_targetID].Cache.Transfer("", tag, index))
+                        this.WriteBackCount++;
+
+                    _processors[_targetID].Cache.SetState(tag, index, (int)BerkleyProtocol.State.EO);
+                }
+                else // 多キャッシュがOwner
+                {
+                    // Line Transfer
+                    if (_processors[_targetID].Cache.Transfer(ownerCache.GetLineData(tag, index), tag, index))
                         this.WriteBackCount++;
 
                     _processors[_targetID].Cache.SetState(tag, index, (int)BerkleyProtocol.State.SN);
@@ -109,14 +110,11 @@ namespace TraceDrivenSimulation
                     // NOTE: Write
                     _processors[_targetID].Cache.SetState(tag, index, (int)BerkleyProtocol.State.EO);
                 }
-                else
-                {
-                    // Line Transfer
-                    if (_processors[_targetID].Cache.Transfer("", tag, index)) // メモリがowner!
-                        this.WriteBackCount++;
 
-                    _processors[_targetID].Cache.SetState(tag, index, (int)BerkleyProtocol.State.EO);
-                }
+                // 最終的に対象キャッシュ以外はすべてInvalidate
+                _otherProcessors
+                    .Where(p => p.Cache.AnyState(tag, index, (int)BerkleyProtocol.State.SN, (int)BerkleyProtocol.State.SO, (int)BerkleyProtocol.State.EO))
+                    .ForEach(p => p.Cache.SetState(tag, index, (int)BerkleyProtocol.State.I));
             }
             else
                 throw new NotSupportedException();

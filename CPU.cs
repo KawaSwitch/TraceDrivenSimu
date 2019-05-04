@@ -54,10 +54,10 @@ namespace TraceDrivenSimulation
             switch (protocol)
             {
                 case Cache.Protocol.ThreeStateBasic:
-                    _protocol = new ThreeStateBasicProtocol();
+                    _protocol = new ThreeStateBasicProtocol(_processors);
                     break;
                 case Cache.Protocol.Berkley:
-                    _protocol = new BerkleyProtocol();
+                    _protocol = new BerkleyProtocol(_processors);
                     break;
                 default:
                     throw new NotImplementedException();
@@ -92,9 +92,9 @@ namespace TraceDrivenSimulation
                     address = elements[3].HexToBinary(32);
 
                     if (rw == "r")
-                        _protocol.Read(address, PU, _processors);
+                        _protocol.Read(address, PU);
                     else
-                        _protocol.Write(address, PU, _processors);
+                        _protocol.Write(address, PU);
                 }
             }      
 

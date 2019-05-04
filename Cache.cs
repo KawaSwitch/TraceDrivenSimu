@@ -96,7 +96,7 @@ namespace TraceDrivenSimulation
                 
                 targetLine.CacheTag.Counter = 0;
                 restLines.ForEach(l => l.CacheTag.Counter++);
-                _lineSet = _lineSet.OrderByDescending(l => l.CacheTag.Counter).ToList();
+                _lineSet = _lineSet.OrderByDescending(l => l.CacheTag.Counter).ToList(); // カウント順に並び替える
             }
             else
             {
@@ -222,6 +222,18 @@ namespace TraceDrivenSimulation
         {
             var line = _lineDatas[index].GetLineByTag(tag);
             return (line != null) ? line.CacheTag.State : -1;
+        }
+
+        /// <summary>
+        /// 対象のラインの状態がどれかの状態と一致しているか
+        /// </summary>
+        public bool AnyState(string tag, int index, params int[] states)
+        {
+            var line = _lineDatas[index].GetLineByTag(tag);           
+            if (line == null)
+                return false;
+
+            return states.Any(s => s == line.CacheTag.State);
         }
 
         /// <summary>

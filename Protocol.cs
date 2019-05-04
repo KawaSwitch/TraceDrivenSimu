@@ -13,6 +13,7 @@ namespace TraceDrivenSimulation
     {
         /// <summary>
         /// 命令対象のプロセッサID
+        ///     内部のRead/Write関数に渡すのを省くためだけにとりあえず置いてます
         /// </summary>
         protected int _targetID;
 
@@ -22,18 +23,29 @@ namespace TraceDrivenSimulation
         protected List<Processor> _processors;
 
         /// <summary>
+        /// 命令対象以外のプロセッサ群
+        ///     内部のRead/Write関数に渡すのを省くためだけにとりあえず置いてます
+        /// </summary>
+        protected List<Processor> _otherProcessors;
+
+        /// <summary>
         /// ライトバックの回数
         ///     ライトスルーの考慮は今の所なし
         /// </summary>
         public int WriteBackCount { get; protected set; } = 0;
 
         /// <summary>
+        /// コンストラクタ
+        /// </summary>
+        public Protocol(List<Processor> processors) { _processors = processors; }
+
+        /// <summary>
         /// 読み込み処理
         /// </summary>
-        public void Read(string address, int PU, List<Processor> processors)
+        public void Read(string address, int PU)
         {
             _targetID = PU;
-            _processors = processors;
+            _otherProcessors = _processors.Where((_, i) => i != _targetID).ToList();
 
             var datas = this.SplitAddressToBits(address);
             this.Read(datas[0], Convert.ToInt32(datas[1], 2), Convert.ToInt32(datas[2], 2));
@@ -42,10 +54,10 @@ namespace TraceDrivenSimulation
         /// <summary>
         /// 書き込み処理
         /// </summary>
-        public void Write(string address, int PU, List<Processor> processors)
+        public void Write(string address, int PU)
         {
             _targetID = PU;
-            _processors = processors;
+            _otherProcessors = _processors.Where((_, i) => i != _targetID).ToList();
 
             var datas = this.SplitAddressToBits(address);
             this.Write(datas[0], Convert.ToInt32(datas[1], 2), Convert.ToInt32(datas[2], 2));
