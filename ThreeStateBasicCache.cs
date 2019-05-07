@@ -27,7 +27,7 @@ namespace TraceDrivenSimulation
                 return new ReadContent { BusMessage = CPU.BusMessage.ReadMiss, WriteBacked = false };
             }
             else if (targetLine.CacheTag.State == (int)ThreeStateBasicProtocol.State.C ||
-                        targetLine.CacheTag.State == (int)ThreeStateBasicProtocol.State.D)
+                    targetLine.CacheTag.State == (int)ThreeStateBasicProtocol.State.D)
             {
                 _hitCount++;
                 targetSet.Push(targetLine);
@@ -73,7 +73,7 @@ namespace TraceDrivenSimulation
         /// <returns>Write-backがあるかどうか</returns>
         public override bool Transfer(object data, string tag, int index)
         {
-            var transLine = new Line { CacheTag = new CacheTag { Tag = tag }, Data = data };
+            var transLine = new Line { CacheTag = new CacheTag { Tag = tag }, Data = data }; // 本当は外で貰う
             var evictionState = _lineDatas[index].Push(transLine);
 
             if (evictionState == (int)ThreeStateBasicProtocol.State.D)

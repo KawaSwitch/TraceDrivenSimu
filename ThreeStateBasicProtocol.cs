@@ -10,11 +10,15 @@ namespace TraceDrivenSimulation
     /// </summary>
     class ThreeStateBasicProtocol : Protocol
     {
+        /// <summary>
+        /// キャッシュの状態
+        /// </summary>
+        [Flags]
         public enum State
         {
-            I,
-            C,
-            D,
+            I = 1,
+            C = 1 << 1,
+            D = 1 << 2,
         };
 
         /// <summary>
@@ -37,7 +41,7 @@ namespace TraceDrivenSimulation
             else if (message == CPU.BusMessage.ReadMiss)
             {
                 var dirtyCache = _otherProcessors
-                    .Where(p => p.Cache.GetState(tag, index) == (int)ThreeStateBasicProtocol.State.D)
+                    .Where(p => p.Cache.GetState(tag, index) == (int)State.D)
                     .Select(p => p.Cache)
                     .FirstOrDefault();
                 
@@ -48,18 +52,18 @@ namespace TraceDrivenSimulation
                     if (_processors[_targetID].Cache.Transfer("", tag, index))
                         this.WriteBackCount++;
 
-                    _processors[_targetID].Cache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.C);
+                    _processors[_targetID].Cache.SetState(tag, index, (int)State.C);
                 }
                 else
                 {
                     this.WriteBackCount++; // 無条件にメモリへライトバック
-                    dirtyCache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.C);
+                    dirtyCache.SetState(tag, index, (int)State.C);
 
                     // NOTE: 本当はここでメモリから読むこむ処理
                     // Line Transfer
                     if (_processors[_targetID].Cache.Transfer("", tag, index))
                         this.WriteBackCount++;
-                    _processors[_targetID].Cache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.C);
+                    _processors[_targetID].Cache.SetState(tag, index, (int)State.C);
                 }
             }
             else
@@ -80,18 +84,18 @@ namespace TraceDrivenSimulation
             else if (message == CPU.BusMessage.Invalidation)
             {
                 _otherProcessors
-                    .Where(p => p.Cache.GetState(tag, index) == (int)ThreeStateBasicProtocol.State.C)
-                    .ForEach(p => p.Cache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.I));
+                    .Where(p => p.Cache.GetState(tag, index) == (int)State.C)
+                    .ForEach(p => p.Cache.SetState(tag, index, (int)State.I));
             }
             else if (message == CPU.BusMessage.WriteMiss)
             {
                 // 他キャッシュのClearはInvalidateしておく
                 _otherProcessors
-                    .Where(p => p.Cache.GetState(tag, index) == (int)ThreeStateBasicProtocol.State.C)
-                    .ForEach(p => p.Cache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.I));
+                    .Where(p => p.Cache.GetState(tag, index) == (int)State.C)
+                    .ForEach(p => p.Cache.SetState(tag, index, (int)State.I));
 
                 var dirtyCache = _otherProcessors
-                    .Where(p => p.Cache.GetState(tag, index) == (int)ThreeStateBasicProtocol.State.D)
+                    .Where(p => p.Cache.GetState(tag, index) == (int)State.D)
                     .Select(p => p.Cache)
                     .FirstOrDefault();    
 
@@ -101,11 +105,11 @@ namespace TraceDrivenSimulation
                     if (_processors[_targetID].Cache.Transfer("", tag, index))
                         this.WriteBackCount++;
 
-                    _processors[_targetID].Cache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.D);
+                    _processors[_targetID].Cache.SetState(tag, index, (int)State.D);
                 }
                 else
                 {
-                    dirtyCache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.I);
+                    dirtyCache.SetState(tag, index, (int)State.I);
                     // NOTE: メモリにライトバック
                     this.WriteBackCount++;
 
@@ -113,9 +117,9 @@ namespace TraceDrivenSimulation
                     if (_processors[_targetID].Cache.Transfer("", tag, index))
                         this.WriteBackCount++;
 
-                    _processors[_targetID].Cache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.C);
+                    _processors[_targetID].Cache.SetState(tag, index, (int)State.C);
                     // NOTE: Write
-                    _processors[_targetID].Cache.SetState(tag, index, (int)ThreeStateBasicProtocol.State.D);
+                    _processors[_targetID].Cache.SetState(tag, index, (int)State.D);
                 }
             }
             else

@@ -230,13 +230,13 @@ namespace TraceDrivenSimulation
         /// <summary>
         /// 対象のラインの状態がどれかの状態と一致しているか
         /// </summary>
-        public bool AnyState(string tag, int index, params int[] states)
+        public bool AnyState(string tag, int index, int stateFlags)
         {
             var line = _lineDatas[index].GetLineByTag(tag);           
             if (line == null)
                 return false;
 
-            return states.Any(s => s == line.CacheTag.State);
+            return line.CacheTag.State == (stateFlags & line.CacheTag.State);
         }
 
         /// <summary>

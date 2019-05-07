@@ -24,7 +24,7 @@ namespace TraceDrivenSimulation
 
             System.Threading.Tasks.Parallel.Invoke
             (
-                () => { cpu0.Simulate(filepath, "3-State-Base Protocol"); },
+                () => { cpu0.Simulate(filepath, "3-State-Basic Protocol"); },
                 () => 
                 { 
                     System.Threading.Thread.Sleep(100); // 短いファイルのとき適当に回避
