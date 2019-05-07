@@ -1,2 +1,14 @@
-tds.exe: Main.cs CPU.cs Processor.cs Cache.cs Protocol.cs Extensions.cs BerkleyCache.cs BerkleyProtocol.cs ThreeStateBasicProtocol.cs ThreeStateBasicCache.cs
-	mcs $^ -out:$@
+TARGET := tds.exe
+
+MCS := mcs
+RM := rm -f
+
+.SUFFIXES:
+.SUFFIXES: .cs .exe
+
+tds.exe: *.cs
+	$(MCS) $^ -out:$@
+
+.PHONY: clean
+clean:
+	$(RM) $(TARGET)
